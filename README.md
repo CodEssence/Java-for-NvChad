@@ -40,3 +40,50 @@ Check out my [Reddit post](update the link)!
 **Feel free to request for the updates, and any assign any troubleshooting steps!**
 
 
+---
+### **Troubleshooting Update: Manual JDTLS Launch & Persistent JAR Access Error**
+
+As part of the ongoing effort to diagnose the Java LSP issue in Neovim (NvChad), a critical troubleshooting step involved attempting to launch the JDTLS language server directly from the terminal. This was done to rule out any integration problems specific to Neovim or its plugins.
+
+**Manual JDTLS Launch Attempt:**
+
+The following command (or a very similar variation) was executed directly in the terminal, targeting the JDTLS launcher JAR:
+
+```bash
+java \
+-Declipse.application=org.eclipse.jdt.ls.core.id1 \
+-Dosgi.bundles.defaultStartLevel=4 \
+-Declipse.product=org.eclipse.jdt.ls.core.product \
+-Dlog.protocol=true \
+-Dlog.level=ALL \
+-Xms1G -Xmx2G \
+-javaagent:"~/.local/share/nvim/mason/packages/jdtls/lombok.jar" \
+-jar "~/.local/share/nvim/mason/packages/jdtls/plugins/org.eclipse.equinox.launcher_1.7.0.v20250331-1702.jar" \
+-configuration "~/.local/share/nvim/mason/packages/jdtls/config_linux" \
+-data "/path/to/your/java/project" \
+--add-modules=ALL-SYSTEM \
+--add-opens java.base/java.util=ALL-UNNAMED \
+--add-opens java.base/java.lang=ALL-UNNAMED
+```
+
+**Resulting Error:**
+
+Despite all prior checks, this command consistently failed with the error:
+
+`Error: Unable to access jarfile org.eclipse.equinox.launcher_1.7.0.v20250331-1702.jar`
+
+**Key Findings & What We've Ruled Out:**
+
+This specific error, "Unable to access jarfile," has led to extensive diagnostics:
+
+* **File Existence & Permissions:** The `org.eclipse.equinox.launcher_*.jar` file exists at the specified path and has been confirmed to have correct read and execute permissions (even tested with `chmod 777` on the directory).
+* **JAR Integrity:** The JAR file is not corrupted, as confirmed by successful extraction using the `unzip` command.
+* **JVM Capability:** The `java` executable itself is functional and capable of running *other* simple `.jar` files (e.g., a "Hello World" JAR) located in the exact same directory, ruling out a general JVM issue or a broader file system access problem.
+* **JDK Version:** The issue persists across different JDK versions (tested with both OpenJDK 22 and Amazon Corretto 17 via `sdkman`).
+* **System Security:** Neither SELinux (not active) nor AppArmor (active but no direct profile for `java`) appear to be directly blocking the `java` command's access to the JAR.
+
+**The Current Blockage:**
+
+The core problem remains why the Java Virtual Machine cannot "access" or more accurately, *execute* this specific `org.eclipse.equinox.launcher_*.jar` file, despite all **filesystem**, **permission**, and **basic JAR integrity** checks appearing to be valid. This suggests a very subtle issue, possibly related to internal JVM class loading, specific characteristics of the Equinox launcher JAR, or an environmental factor not yet identified.
+
+**Any insights from those familiar with deep JVM behavior or Eclipse Equinox would be invaluable.**
